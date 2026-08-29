@@ -1,0 +1,7 @@
+{
+  "name": "Taoxichuan / 陶溪川",
+  "place_type": "regenerative cultural district",
+  "diagnostic_scope": "TO BE DEFINED DURING VALIDATION",
+  "status": "source-pack-template",
+  "notes": "This control case is used to test whether PlaceGap can explain successful regeneration, not only failure."
+}
