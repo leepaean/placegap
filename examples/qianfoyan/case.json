@@ -1,7 +1,9 @@
 {
+  "id": "65bf1422-e641-5e6b-ad9f-56a6619c933c",
   "name": "Qianfoyan / 千佛岩",
+  "location": "Jiajiang County, Leshan, Sichuan, China",
   "place_type": "heritage attraction",
-  "diagnostic_scope": "TO BE DEFINED DURING VALIDATION",
-  "status": "source-pack-template",
-  "notes": "Do not treat preliminary hypotheses as authoritative findings."
+  "diagnostic_scope": "Assess publicly observable conversion from major heritage and irrigation assets into visitor understanding, experience, product and economic value. Conservation quality itself is out of scope except where it directly constrains visitor use or operating capacity.",
+  "status": "evidence-pack-v0.1",
+  "notes": "This case is a validation pack. Evidence entries are source-bound observations, not authoritative diagnostic conclusions. Public-data gaps must remain explicit."
 }
