@@ -6,6 +6,7 @@ from pathlib import Path
 from uuid import UUID
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from backend.store import SQLiteStore
@@ -41,6 +42,13 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
         description="Evidence-backed diagnostics for cultural places.",
         lifespan=lifespan,
     )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     def get_store(request: Request) -> SQLiteStore:
         return request.app.state.store
@@ -55,9 +63,7 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
         store: SQLiteStore, place_id: UUID, evidence_ids: list[UUID]
     ) -> None:
         evidence = [store.get_evidence(str(eid)) for eid in evidence_ids]
-        missing = [
-            eid for eid, item in zip(evidence_ids, evidence, strict=True) if item is None
-        ]
+        missing = [eid for eid, item in zip(evidence_ids, evidence, strict=True) if item is None]
         if missing:
             raise HTTPException(
                 status_code=422,
@@ -80,6 +86,10 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
     @app.get("/health")
     def health() -> dict:
         return {"status": "ok", "version": "0.0.1"}
+
+    @app.get("/places", response_model=list[Place])
+    def list_places(request: Request) -> list[Place]:
+        return get_store(request).list_places()
 
     @app.post("/places", response_model=Place, status_code=201)
     def create_place(place: Place, request: Request) -> Place:
@@ -106,9 +116,7 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
         return finding
 
     @app.patch("/findings/{finding_id}/verify", response_model=Finding)
-    def verify_finding(
-        finding_id: UUID, payload: FindingVerification, request: Request
-    ) -> Finding:
+    def verify_finding(finding_id: UUID, payload: FindingVerification, request: Request) -> Finding:
         store = get_store(request)
         finding = store.get_finding(str(finding_id))
         if finding is None:
@@ -116,13 +124,9 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
 
         original_statement = finding.original_statement
         statement = finding.statement
-
         if payload.status == VerificationStatus.EDITED:
             if not payload.human_revision:
-                raise HTTPException(
-                    status_code=422,
-                    detail="human_revision is required when status is EDITED",
-                )
+                raise HTTPException(status_code=422, detail="human_revision is required when status is EDITED")
             original_statement = original_statement or finding.statement
             statement = payload.human_revision
 
@@ -141,18 +145,10 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
     def create_gap(gap: Gap, request: Request) -> Gap:
         store = get_store(request)
         require_place(store, gap.place_id)
-
         linked_findings = [store.get_finding(str(fid)) for fid in gap.finding_ids]
-        missing = [
-            fid
-            for fid, item in zip(gap.finding_ids, linked_findings, strict=True)
-            if item is None
-        ]
+        missing = [fid for fid, item in zip(gap.finding_ids, linked_findings, strict=True) if item is None]
         if missing:
-            raise HTTPException(
-                status_code=422,
-                detail={"message": "Unknown finding_ids", "ids": [str(x) for x in missing]},
-            )
+            raise HTTPException(status_code=422, detail={"message": "Unknown finding_ids", "ids": [str(x) for x in missing]})
         wrong_place = [
             fid
             for fid, item in zip(gap.finding_ids, linked_findings, strict=True)
@@ -161,12 +157,8 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
         if wrong_place:
             raise HTTPException(
                 status_code=422,
-                detail={
-                    "message": "Findings must belong to the same Place",
-                    "ids": [str(x) for x in wrong_place],
-                },
+                detail={"message": "Findings must belong to the same Place", "ids": [str(x) for x in wrong_place]},
             )
-
         store.put_gap(gap)
         return gap
 
@@ -174,38 +166,26 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
     def create_hypothesis(hypothesis: Hypothesis, request: Request) -> Hypothesis:
         store = get_store(request)
         require_place(store, hypothesis.place_id)
-
         if hypothesis.gap_id is not None:
             gap = store.get_gap(str(hypothesis.gap_id))
             if gap is None:
                 raise HTTPException(status_code=422, detail="Unknown gap_id")
             if gap.place_id != hypothesis.place_id:
                 raise HTTPException(status_code=422, detail="Gap must belong to the same Place")
-
-        all_ids = list(
-            dict.fromkeys(
-                hypothesis.supporting_evidence_ids
-                + hypothesis.contradicting_evidence_ids
-            )
-        )
+        all_ids = list(dict.fromkeys(hypothesis.supporting_evidence_ids + hypothesis.contradicting_evidence_ids))
         require_same_place_evidence(store, hypothesis.place_id, all_ids)
         store.put_hypothesis(hypothesis)
         return hypothesis
 
     @app.post("/evidence-needs", response_model=EvidenceNeed, status_code=201)
-    def create_evidence_need(
-        evidence_need: EvidenceNeed, request: Request
-    ) -> EvidenceNeed:
+    def create_evidence_need(evidence_need: EvidenceNeed, request: Request) -> EvidenceNeed:
         store = get_store(request)
         require_place(store, evidence_need.place_id)
         hypothesis = store.get_hypothesis(str(evidence_need.related_hypothesis_id))
         if hypothesis is None:
             raise HTTPException(status_code=422, detail="Unknown related_hypothesis_id")
         if hypothesis.place_id != evidence_need.place_id:
-            raise HTTPException(
-                status_code=422,
-                detail="Evidence Need and Hypothesis must belong to the same Place",
-            )
+            raise HTTPException(status_code=422, detail="Evidence Need and Hypothesis must belong to the same Place")
         store.put_evidence_need(evidence_need)
         return evidence_need
 
