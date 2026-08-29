@@ -1,0 +1,71 @@
+export type Reliability = 'HIGH' | 'MEDIUM' | 'LOW' | 'UNRATED'
+export type VerificationStatus = 'UNVERIFIED' | 'ACCEPTED' | 'EDITED' | 'REJECTED'
+export type Dimension =
+  | 'RESOURCE'
+  | 'MEANING'
+  | 'VISIBILITY'
+  | 'EXPERIENCE'
+  | 'PRODUCT'
+  | 'CONVERSION'
+  | 'ADVOCACY'
+  | 'REGENERATION'
+
+export interface Place {
+  id: string
+  name: string
+  location?: string | null
+  place_type?: string | null
+  description?: string | null
+  diagnostic_scope: string
+}
+
+export interface Evidence {
+  id: string
+  place_id: string
+  title: string
+  source_type: string
+  source_name?: string | null
+  author?: string | null
+  published_at?: string | null
+  collected_at: string
+  url?: string | null
+  file_reference?: string | null
+  excerpt: string
+  notes?: string | null
+  reliability: Reliability
+  scope?: string | null
+  tags: string[]
+}
+
+export interface Finding {
+  id: string
+  place_id: string
+  statement: string
+  dimension: Dimension
+  evidence_ids: string[]
+  generated_by: string
+  verification_status: VerificationStatus
+  original_statement?: string | null
+  human_revision?: string | null
+  created_at: string
+}
+
+export interface DiagnosticState {
+  place: Place
+  evidence: Evidence[]
+  findings: Finding[]
+  gaps: unknown[]
+  hypotheses: unknown[]
+  evidence_needs: unknown[]
+}
+
+export const DIMENSIONS: Dimension[] = [
+  'RESOURCE',
+  'MEANING',
+  'VISIBILITY',
+  'EXPERIENCE',
+  'PRODUCT',
+  'CONVERSION',
+  'ADVOCACY',
+  'REGENERATION',
+]
