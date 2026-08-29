@@ -48,6 +48,18 @@ class HypothesisStatus(str, Enum):
     NEEDS_EVIDENCE = "NEEDS_EVIDENCE"
 
 
+class EvidenceNeedPriority(str, Enum):
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+
+
+class EvidenceNeedStatus(str, Enum):
+    OPEN = "OPEN"
+    COLLECTED = "COLLECTED"
+    DISMISSED = "DISMISSED"
+
+
 class Place(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     name: str
@@ -85,6 +97,7 @@ class Finding(BaseModel):
     evidence_ids: list[UUID]
     generated_by: str = "human"
     verification_status: VerificationStatus = VerificationStatus.UNVERIFIED
+    original_statement: Optional[str] = None
     human_revision: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -113,3 +126,15 @@ class Hypothesis(BaseModel):
     human_notes: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class EvidenceNeed(BaseModel):
+    id: UUID = Field(default_factory=uuid4)
+    place_id: UUID
+    related_hypothesis_id: UUID
+    question: str
+    why_it_matters: str
+    recommended_method: Optional[str] = None
+    priority: EvidenceNeedPriority = EvidenceNeedPriority.MEDIUM
+    status: EvidenceNeedStatus = EvidenceNeedStatus.OPEN
+    created_at: datetime = Field(default_factory=datetime.utcnow)
