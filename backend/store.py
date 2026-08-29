@@ -21,13 +21,7 @@ _TABLE_MODELS = {
 
 
 class SQLiteStore:
-    """Durable local persistence for the evolving v0.1 domain schema.
-
-    SQLite stores the complete validated Pydantic payload plus ``place_id`` for
-    fast local queries and referential integrity. Keeping persistence thin at
-    this stage lets the public domain model evolve without duplicating it into
-    a second ORM schema prematurely.
-    """
+    """Durable local persistence for the evolving v0.1 domain schema."""
 
     def __init__(self, path: str | Path = "placegap.db") -> None:
         self.path = str(path)
@@ -127,6 +121,11 @@ class SQLiteStore:
 
     def get_place(self, place_id: str) -> Place | None:
         return self._get("places", place_id)  # type: ignore[return-value]
+
+    def list_places(self) -> list[Place]:
+        with self.connect() as connection:
+            rows = connection.execute("SELECT payload FROM places ORDER BY rowid DESC").fetchall()
+        return [Place.model_validate_json(row["payload"]) for row in rows]
 
     def put_evidence(self, evidence: Evidence) -> None:
         self._put("evidence", evidence, str(evidence.place_id))
