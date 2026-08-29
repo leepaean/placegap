@@ -28,6 +28,18 @@ PlaceGap deliberately separates:
 - what contradicts a hypothesis;
 - what remains unknown.
 
+## Quick start for local testing
+
+Requires Python 3.11+ and Node.js 22+.
+
+```bash
+git clone https://github.com/leepaean/placegap.git
+cd placegap
+bash scripts/dev.sh
+```
+
+Then open `http://127.0.0.1:5173` in a browser. The launcher creates the Python environment, installs dependencies when needed, starts the API and Vite UI, and stores local diagnostic state in `placegap.db`.
+
 ## Diagnostic dimensions
 
 PlaceGap uses eight diagnostic dimensions as coordinates, not as a rigid causal law:
@@ -45,13 +57,15 @@ The product is interested in the **gaps between them**, not in producing pseudo-
 
 ## Development status
 
-`v0.0.1` — repository bootstrap and core domain schema.
+`v0.0.1` — working local persistence plus the first Evidence Board / Finding Review interface.
 
 The first vertical slice is:
 
 ```text
 Evidence → Finding → Human Verify → Hypothesis
 ```
+
+LLM behavior is intentionally deferred until the human evidence workflow passes usability testing.
 
 ## Product principles
 
