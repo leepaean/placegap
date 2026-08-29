@@ -1,0 +1,7 @@
+{
+  "case_id": "example",
+  "diagnostic_scope": "Define the exact question being tested.",
+  "source_count": 0,
+  "comparison_conditions": ["ordinary-gpt", "expert-prompt", "placegap"],
+  "notes": "All comparison conditions must receive the same source pack."
+}
