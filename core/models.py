@@ -1,11 +1,15 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class Dimension(str, Enum):
@@ -67,8 +71,8 @@ class Place(BaseModel):
     place_type: Optional[str] = None
     description: Optional[str] = None
     diagnostic_scope: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
 
 
 class Evidence(BaseModel):
@@ -79,7 +83,7 @@ class Evidence(BaseModel):
     source_name: Optional[str] = None
     author: Optional[str] = None
     published_at: Optional[datetime] = None
-    collected_at: datetime = Field(default_factory=datetime.utcnow)
+    collected_at: datetime = Field(default_factory=utc_now)
     url: Optional[str] = None
     file_reference: Optional[str] = None
     excerpt: str
@@ -99,7 +103,7 @@ class Finding(BaseModel):
     verification_status: VerificationStatus = VerificationStatus.UNVERIFIED
     original_statement: Optional[str] = None
     human_revision: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
 
 
 class Gap(BaseModel):
@@ -124,8 +128,8 @@ class Hypothesis(BaseModel):
     confidence_reason: Optional[str] = None
     status: HypothesisStatus = HypothesisStatus.DRAFT
     human_notes: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
 
 
 class EvidenceNeed(BaseModel):
@@ -137,4 +141,4 @@ class EvidenceNeed(BaseModel):
     recommended_method: Optional[str] = None
     priority: EvidenceNeedPriority = EvidenceNeedPriority.MEDIUM
     status: EvidenceNeedStatus = EvidenceNeedStatus.OPEN
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
