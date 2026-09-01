@@ -30,6 +30,13 @@ class Reliability(str, Enum):
     UNRATED = "UNRATED"
 
 
+class EvidenceKind(str, Enum):
+    QUOTE = "QUOTE"
+    DATUM = "DATUM"
+    SUMMARY = "SUMMARY"
+    OBSERVATION = "OBSERVATION"
+
+
 class Confidence(str, Enum):
     HIGH = "HIGH"
     MEDIUM = "MEDIUM"
@@ -95,13 +102,14 @@ class Source(BaseModel):
 
 
 class Evidence(BaseModel):
-    """A diagnostic excerpt or datum that can be traced back to a Source."""
+    """A diagnostic representation that can be traced back to a Source."""
 
     id: UUID = Field(default_factory=uuid4)
     place_id: UUID
     source_id: Optional[UUID] = None
     title: str
     excerpt: str
+    kind: EvidenceKind = EvidenceKind.SUMMARY
     reliability: Reliability = Reliability.UNRATED
     scope: Optional[str] = None
     tags: list[str] = Field(default_factory=list)
