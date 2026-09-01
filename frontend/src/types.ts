@@ -72,8 +72,17 @@ export interface Finding {
 
 export interface FindingProposal {
   statement: string
+  dimension: Dimension
   evidence_ids: string[]
   generated_by: string
+  support_note?: string | null
+}
+
+export interface LLMStatus {
+  configured: boolean
+  provider: string
+  model?: string | null
+  mode: string
 }
 
 export interface SourcePackPayload {
