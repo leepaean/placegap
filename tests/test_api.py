@@ -80,10 +80,10 @@ def test_complete_auditable_vertical_slice(tmp_path):
                 "supporting_evidence_ids": [evidence_id],
                 "alternative_explanations": [
                     "Holiday traffic may not represent normal-period awareness.",
-                    "Visitors may be arriving for adjacent attractions rather than this place itself."
+                    "Visitors may be arriving for adjacent attractions rather than this place itself.",
                 ],
                 "confidence": "MEDIUM",
-                "confidence_reason": "One high-reliability source supports holiday traffic, but temporal representativeness is limited."
+                "confidence_reason": "One high-reliability source supports holiday traffic, but temporal representativeness is limited.",
             },
         )
         assert hypothesis.status_code == 201
@@ -97,7 +97,7 @@ def test_complete_auditable_vertical_slice(tmp_path):
                 "question": "What proportion of visitors identify this place as their primary trip purpose?",
                 "why_it_matters": "This would distinguish destination awareness from incidental holiday traffic.",
                 "recommended_method": "Visitor intercept survey",
-                "priority": "HIGH"
+                "priority": "HIGH",
             },
         )
         assert evidence_need.status_code == 201
@@ -105,6 +105,7 @@ def test_complete_auditable_vertical_slice(tmp_path):
         state = client.get(f"/places/{place_id}/diagnostic-state")
         assert state.status_code == 200
         body = state.json()
+        assert body["sources"] == []
         assert len(body["evidence"]) == 1
         assert len(body["findings"]) == 1
         assert len(body["gaps"]) == 1
@@ -112,7 +113,7 @@ def test_complete_auditable_vertical_slice(tmp_path):
         assert len(body["evidence_needs"]) == 1
 
 
-def test_persists_across_app_restart(tmp_path):
+def test_source_and_linked_evidence_persist_across_restart(tmp_path):
     db_path = tmp_path / "persistent.db"
 
     with TestClient(create_app(db_path)) as client:
@@ -121,22 +122,110 @@ def test_persists_across_app_restart(tmp_path):
             json={"name": "Persistent Place", "diagnostic_scope": "Persistence test"},
         ).json()
         place_id = place["id"]
+        source = client.post(
+            "/sources",
+            json={
+                "place_id": place_id,
+                "title": "Official bulletin",
+                "source_type": "official",
+                "source_name": "County government",
+                "url": "https://example.test/bulletin",
+                "reliability": "HIGH",
+            },
+        )
+        assert source.status_code == 201
+        source_id = source.json()["id"]
+
         evidence = client.post(
             "/evidence",
             json={
                 "place_id": place_id,
+                "source_id": source_id,
                 "title": "Durable evidence",
-                "source_type": "official",
                 "excerpt": "This row should survive an application restart.",
             },
         )
         assert evidence.status_code == 201
+        assert evidence.json()["source_type"] == "official"
+        assert evidence.json()["source_name"] == "County government"
+        assert evidence.json()["reliability"] == "HIGH"
 
     with TestClient(create_app(db_path)) as client:
         state = client.get(f"/places/{place_id}/diagnostic-state")
         assert state.status_code == 200
-        assert state.json()["place"]["name"] == "Persistent Place"
-        assert state.json()["evidence"][0]["title"] == "Durable evidence"
+        body = state.json()
+        assert body["place"]["name"] == "Persistent Place"
+        assert body["sources"][0]["title"] == "Official bulletin"
+        assert body["evidence"][0]["title"] == "Durable evidence"
+        assert body["evidence"][0]["source_id"] == source_id
+
+
+def test_source_pack_import_preserves_source_to_evidence_link(tmp_path):
+    with client_for(tmp_path) as client:
+        place = client.post(
+            "/places",
+            json={"name": "Pack Place", "diagnostic_scope": "Import test"},
+        ).json()
+
+        response = client.post(
+            f"/places/{place['id']}/source-packs/import",
+            json={
+                "sources": [
+                    {
+                        "key": "gov-01",
+                        "title": "Government visitor bulletin",
+                        "source_type": "official",
+                        "source_name": "Local government",
+                        "reliability": "HIGH",
+                        "url": "https://example.test/gov-01",
+                    }
+                ],
+                "evidence": [
+                    {
+                        "source_key": "gov-01",
+                        "title": "Holiday visitors",
+                        "excerpt": "2026年春节期间，该景区接待游客10万人次。",
+                    }
+                ],
+            },
+        )
+        assert response.status_code == 201
+        assert response.json() == {"sources_created": 1, "evidence_created": 1}
+
+        state = client.get(f"/places/{place['id']}/diagnostic-state").json()
+        assert len(state["sources"]) == 1
+        assert len(state["evidence"]) == 1
+        assert state["evidence"][0]["source_id"] == state["sources"][0]["id"]
+        assert state["evidence"][0]["reliability"] == "HIGH"
+
+
+def test_conservative_proposals_only_reuse_evidence_words(tmp_path):
+    with client_for(tmp_path) as client:
+        place = client.post(
+            "/places",
+            json={"name": "Proposal Place", "diagnostic_scope": "Proposal baseline"},
+        ).json()
+        evidence = client.post(
+            "/evidence",
+            json={
+                "place_id": place["id"],
+                "title": "Two statements",
+                "excerpt": "2026年春节期间，该景区接待游客10万人次。该数据仅覆盖春节期间。",
+            },
+        ).json()
+
+        response = client.post(
+            f"/places/{place['id']}/finding-proposals",
+            json={"evidence_ids": [evidence["id"]]},
+        )
+        assert response.status_code == 200
+        statements = [item["statement"] for item in response.json()]
+        assert statements == [
+            "2026年春节期间，该景区接待游客10万人次。",
+            "该数据仅覆盖春节期间。",
+        ]
+        assert all(statement in evidence["excerpt"] for statement in statements)
+        assert all(item["generated_by"] == "verbatim-baseline" for item in response.json())
 
 
 def test_cross_place_evidence_is_rejected(tmp_path):
@@ -154,7 +243,7 @@ def test_cross_place_evidence_is_rejected(tmp_path):
                 "place_id": first["id"],
                 "title": "Evidence for A",
                 "source_type": "official",
-                "excerpt": "Evidence belongs to Place A."
+                "excerpt": "Evidence belongs to Place A.",
             },
         ).json()
 
@@ -164,11 +253,37 @@ def test_cross_place_evidence_is_rejected(tmp_path):
                 "place_id": second["id"],
                 "statement": "This must not be allowed.",
                 "dimension": "RESOURCE",
-                "evidence_ids": [evidence["id"]]
+                "evidence_ids": [evidence["id"]],
             },
         )
         assert response.status_code == 422
         assert response.json()["detail"]["message"] == "Evidence must belong to the same Place"
+
+
+def test_cross_place_source_is_rejected(tmp_path):
+    with client_for(tmp_path) as client:
+        first = client.post(
+            "/places", json={"name": "Place A", "diagnostic_scope": "A"}
+        ).json()
+        second = client.post(
+            "/places", json={"name": "Place B", "diagnostic_scope": "B"}
+        ).json()
+        source = client.post(
+            "/sources",
+            json={"place_id": first["id"], "title": "A source", "source_type": "official"},
+        ).json()
+
+        response = client.post(
+            "/evidence",
+            json={
+                "place_id": second["id"],
+                "source_id": source["id"],
+                "title": "Invalid evidence",
+                "excerpt": "Must not cross places.",
+            },
+        )
+        assert response.status_code == 422
+        assert response.json()["detail"] == "Source must belong to the same Place"
 
 
 def test_edit_requires_human_revision(tmp_path):
@@ -183,7 +298,7 @@ def test_edit_requires_human_revision(tmp_path):
                 "place_id": place["id"],
                 "title": "Source",
                 "source_type": "other",
-                "excerpt": "A directly observable statement."
+                "excerpt": "A directly observable statement.",
             },
         ).json()
         finding = client.post(
@@ -192,7 +307,7 @@ def test_edit_requires_human_revision(tmp_path):
                 "place_id": place["id"],
                 "statement": "A directly observable statement.",
                 "dimension": "RESOURCE",
-                "evidence_ids": [evidence["id"]]
+                "evidence_ids": [evidence["id"]],
             },
         ).json()
 
