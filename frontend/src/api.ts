@@ -1,4 +1,13 @@
-import type { DiagnosticState, Evidence, Finding, Place, VerificationStatus } from './types'
+import type {
+  DiagnosticState,
+  Evidence,
+  Finding,
+  FindingProposal,
+  Place,
+  Source,
+  SourcePackPayload,
+  VerificationStatus,
+} from './types'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:8000'
 
@@ -19,8 +28,20 @@ export const api = {
   createPlace: (input: Pick<Place, 'name' | 'diagnostic_scope'> & Partial<Place>) =>
     request<Place>('/places', { method: 'POST', body: JSON.stringify(input) }),
   state: (placeId: string) => request<DiagnosticState>(`/places/${placeId}/diagnostic-state`),
-  addEvidence: (input: Partial<Evidence> & Pick<Evidence, 'place_id' | 'title' | 'source_type' | 'excerpt'>) =>
+  addSource: (input: Partial<Source> & Pick<Source, 'place_id' | 'title' | 'source_type'>) =>
+    request<Source>('/sources', { method: 'POST', body: JSON.stringify(input) }),
+  importSourcePack: (placeId: string, input: SourcePackPayload) =>
+    request<{ sources_created: number; evidence_created: number }>(`/places/${placeId}/source-packs/import`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  addEvidence: (input: Partial<Evidence> & Pick<Evidence, 'place_id' | 'title' | 'excerpt'>) =>
     request<Evidence>('/evidence', { method: 'POST', body: JSON.stringify(input) }),
+  proposeFindings: (placeId: string, evidenceIds: string[]) =>
+    request<FindingProposal[]>(`/places/${placeId}/finding-proposals`, {
+      method: 'POST',
+      body: JSON.stringify({ evidence_ids: evidenceIds }),
+    }),
   addFinding: (input: Partial<Finding> & Pick<Finding, 'place_id' | 'statement' | 'dimension' | 'evidence_ids'>) =>
     request<Finding>('/findings', { method: 'POST', body: JSON.stringify(input) }),
   verifyFinding: (findingId: string, status: VerificationStatus, humanRevision?: string) =>

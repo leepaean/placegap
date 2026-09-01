@@ -30,6 +30,13 @@ class Reliability(str, Enum):
     UNRATED = "UNRATED"
 
 
+class EvidenceKind(str, Enum):
+    QUOTE = "QUOTE"
+    DATUM = "DATUM"
+    SUMMARY = "SUMMARY"
+    OBSERVATION = "OBSERVATION"
+
+
 class Confidence(str, Enum):
     HIGH = "HIGH"
     MEDIUM = "MEDIUM"
@@ -75,7 +82,9 @@ class Place(BaseModel):
     updated_at: datetime = Field(default_factory=utc_now)
 
 
-class Evidence(BaseModel):
+class Source(BaseModel):
+    """A whole document, webpage, interview, observation record, or other origin."""
+
     id: UUID = Field(default_factory=uuid4)
     place_id: UUID
     title: str
@@ -86,11 +95,34 @@ class Evidence(BaseModel):
     collected_at: datetime = Field(default_factory=utc_now)
     url: Optional[str] = None
     file_reference: Optional[str] = None
-    excerpt: str
+    content_text: Optional[str] = None
     notes: Optional[str] = None
+    reliability: Reliability = Reliability.UNRATED
+    tags: list[str] = Field(default_factory=list)
+
+
+class Evidence(BaseModel):
+    """A diagnostic representation that can be traced back to a Source."""
+
+    id: UUID = Field(default_factory=uuid4)
+    place_id: UUID
+    source_id: Optional[UUID] = None
+    title: str
+    excerpt: str
+    kind: EvidenceKind = EvidenceKind.SUMMARY
     reliability: Reliability = Reliability.UNRATED
     scope: Optional[str] = None
     tags: list[str] = Field(default_factory=list)
+
+    # Optional source snapshot fields preserve compatibility with existing data.
+    source_type: str = "other"
+    source_name: Optional[str] = None
+    author: Optional[str] = None
+    published_at: Optional[datetime] = None
+    collected_at: datetime = Field(default_factory=utc_now)
+    url: Optional[str] = None
+    file_reference: Optional[str] = None
+    notes: Optional[str] = None
 
 
 class Finding(BaseModel):
