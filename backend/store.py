@@ -6,12 +6,13 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
-from core.models import Evidence, EvidenceNeed, Finding, Gap, Hypothesis, Place
+from core.models import Evidence, EvidenceNeed, Finding, Gap, Hypothesis, Place, Source
 
 ModelT = TypeVar("ModelT", bound=BaseModel)
 
 _TABLE_MODELS = {
     "places": Place,
+    "sources": Source,
     "evidence": Evidence,
     "findings": Finding,
     "gaps": Gap,
@@ -40,6 +41,14 @@ class SQLiteStore:
                     id TEXT PRIMARY KEY,
                     payload TEXT NOT NULL
                 );
+
+                CREATE TABLE IF NOT EXISTS sources (
+                    id TEXT PRIMARY KEY,
+                    place_id TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    FOREIGN KEY(place_id) REFERENCES places(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_sources_place ON sources(place_id);
 
                 CREATE TABLE IF NOT EXISTS evidence (
                     id TEXT PRIMARY KEY,
@@ -126,6 +135,15 @@ class SQLiteStore:
         with self.connect() as connection:
             rows = connection.execute("SELECT payload FROM places ORDER BY rowid DESC").fetchall()
         return [Place.model_validate_json(row["payload"]) for row in rows]
+
+    def put_source(self, source: Source) -> None:
+        self._put("sources", source, str(source.place_id))
+
+    def get_source(self, source_id: str) -> Source | None:
+        return self._get("sources", source_id)  # type: ignore[return-value]
+
+    def list_sources(self, place_id: str) -> list[Source]:
+        return self._list_for_place("sources", place_id)  # type: ignore[return-value]
 
     def put_evidence(self, evidence: Evidence) -> None:
         self._put("evidence", evidence, str(evidence.place_id))
