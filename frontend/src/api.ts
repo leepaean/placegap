@@ -3,6 +3,7 @@ import type {
   Evidence,
   Finding,
   FindingProposal,
+  LLMStatus,
   Place,
   Source,
   SourcePackPayload,
@@ -24,6 +25,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  llmStatus: () => request<LLMStatus>('/llm/status'),
   listPlaces: () => request<Place[]>('/places'),
   createPlace: (input: Pick<Place, 'name' | 'diagnostic_scope'> & Partial<Place>) =>
     request<Place>('/places', { method: 'POST', body: JSON.stringify(input) }),
