@@ -1,4 +1,5 @@
 export type Reliability = 'HIGH' | 'MEDIUM' | 'LOW' | 'UNRATED'
+export type EvidenceKind = 'QUOTE' | 'DATUM' | 'SUMMARY' | 'OBSERVATION'
 export type VerificationStatus = 'UNVERIFIED' | 'ACCEPTED' | 'EDITED' | 'REJECTED'
 export type Dimension =
   | 'RESOURCE'
@@ -42,6 +43,7 @@ export interface Evidence {
   source_id?: string | null
   title: string
   excerpt: string
+  kind: EvidenceKind
   reliability: Reliability
   scope?: string | null
   tags: string[]
@@ -93,6 +95,7 @@ export interface SourcePackPayload {
     source_key?: string | null
     title: string
     excerpt: string
+    kind?: EvidenceKind
     reliability?: Reliability
     scope?: string | null
     tags?: string[]
@@ -108,6 +111,8 @@ export interface DiagnosticState {
   hypotheses: unknown[]
   evidence_needs: unknown[]
 }
+
+export const EVIDENCE_KINDS: EvidenceKind[] = ['QUOTE', 'DATUM', 'SUMMARY', 'OBSERVATION']
 
 export const DIMENSIONS: Dimension[] = [
   'RESOURCE',
