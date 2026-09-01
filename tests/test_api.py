@@ -27,6 +27,7 @@ def test_complete_auditable_vertical_slice(tmp_path):
                 "title": "Official visitor statistics",
                 "source_type": "official",
                 "excerpt": "The site received 80,000 visitors during the holiday period.",
+                "kind": "DATUM",
                 "reliability": "HIGH",
             },
         )
@@ -107,6 +108,7 @@ def test_complete_auditable_vertical_slice(tmp_path):
         body = state.json()
         assert body["sources"] == []
         assert len(body["evidence"]) == 1
+        assert body["evidence"][0]["kind"] == "DATUM"
         assert len(body["findings"]) == 1
         assert len(body["gaps"]) == 1
         assert len(body["hypotheses"]) == 1
@@ -143,12 +145,14 @@ def test_source_and_linked_evidence_persist_across_restart(tmp_path):
                 "source_id": source_id,
                 "title": "Durable evidence",
                 "excerpt": "This row should survive an application restart.",
+                "kind": "QUOTE",
             },
         )
         assert evidence.status_code == 201
         assert evidence.json()["source_type"] == "official"
         assert evidence.json()["source_name"] == "County government"
         assert evidence.json()["reliability"] == "HIGH"
+        assert evidence.json()["kind"] == "QUOTE"
 
     with TestClient(create_app(db_path)) as client:
         state = client.get(f"/places/{place_id}/diagnostic-state")
@@ -158,6 +162,7 @@ def test_source_and_linked_evidence_persist_across_restart(tmp_path):
         assert body["sources"][0]["title"] == "Official bulletin"
         assert body["evidence"][0]["title"] == "Durable evidence"
         assert body["evidence"][0]["source_id"] == source_id
+        assert body["evidence"][0]["kind"] == "QUOTE"
 
 
 def test_source_pack_import_preserves_source_to_evidence_link(tmp_path):
@@ -185,6 +190,7 @@ def test_source_pack_import_preserves_source_to_evidence_link(tmp_path):
                         "source_key": "gov-01",
                         "title": "Holiday visitors",
                         "excerpt": "2026年春节期间，该景区接待游客10万人次。",
+                        "kind": "DATUM",
                     }
                 ],
             },
@@ -197,6 +203,35 @@ def test_source_pack_import_preserves_source_to_evidence_link(tmp_path):
         assert len(state["evidence"]) == 1
         assert state["evidence"][0]["source_id"] == state["sources"][0]["id"]
         assert state["evidence"][0]["reliability"] == "HIGH"
+        assert state["evidence"][0]["kind"] == "DATUM"
+
+
+def test_source_pack_validation_happens_before_persistence(tmp_path):
+    with client_for(tmp_path) as client:
+        place = client.post(
+            "/places",
+            json={"name": "Invalid Pack Place", "diagnostic_scope": "Atomic import test"},
+        ).json()
+
+        response = client.post(
+            f"/places/{place['id']}/source-packs/import",
+            json={
+                "sources": [
+                    {"key": "known", "title": "Known source", "source_type": "official"}
+                ],
+                "evidence": [
+                    {
+                        "source_key": "missing",
+                        "title": "Broken evidence",
+                        "excerpt": "This must fail before anything is written.",
+                    }
+                ],
+            },
+        )
+        assert response.status_code == 422
+        state = client.get(f"/places/{place['id']}/diagnostic-state").json()
+        assert state["sources"] == []
+        assert state["evidence"] == []
 
 
 def test_conservative_proposals_only_reuse_evidence_words(tmp_path):
@@ -211,6 +246,7 @@ def test_conservative_proposals_only_reuse_evidence_words(tmp_path):
                 "place_id": place["id"],
                 "title": "Two statements",
                 "excerpt": "2026年春节期间，该景区接待游客10万人次。该数据仅覆盖春节期间。",
+                "kind": "SUMMARY",
             },
         ).json()
 
@@ -225,7 +261,7 @@ def test_conservative_proposals_only_reuse_evidence_words(tmp_path):
             "该数据仅覆盖春节期间。",
         ]
         assert all(statement in evidence["excerpt"] for statement in statements)
-        assert all(item["generated_by"] == "verbatim-baseline" for item in response.json())
+        assert all(item["generated_by"] == "evidence-text-baseline" for item in response.json())
 
 
 def test_cross_place_evidence_is_rejected(tmp_path):
