@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import re
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 from uuid import UUID
@@ -36,7 +37,7 @@ class SourcePackSource(BaseModel):
     source_type: str
     source_name: Optional[str] = None
     author: Optional[str] = None
-    published_at: Optional[str] = None
+    published_at: Optional[datetime] = None
     url: Optional[str] = None
     file_reference: Optional[str] = None
     content_text: Optional[str] = None
@@ -183,10 +184,33 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
         store = get_store(request)
         require_place(store, place_id)
 
+        declared_keys: set[str] = set()
+        duplicate_keys: set[str] = set()
+        for item in payload.sources:
+            if item.key in declared_keys:
+                duplicate_keys.add(item.key)
+            declared_keys.add(item.key)
+        if duplicate_keys:
+            raise HTTPException(
+                status_code=422,
+                detail={"message": "Duplicate source keys", "keys": sorted(duplicate_keys)},
+            )
+
+        unknown_keys = sorted(
+            {
+                item.source_key
+                for item in payload.evidence
+                if item.source_key and item.source_key not in declared_keys
+            }
+        )
+        if unknown_keys:
+            raise HTTPException(
+                status_code=422,
+                detail={"message": "Evidence references unknown source keys", "keys": unknown_keys},
+            )
+
         source_map: dict[str, Source] = {}
         for item in payload.sources:
-            if item.key in source_map:
-                raise HTTPException(status_code=422, detail=f"Duplicate source key: {item.key}")
             source = Source(
                 place_id=place_id,
                 title=item.title,
@@ -205,14 +229,7 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
             source_map[item.key] = source
 
         for item in payload.evidence:
-            source = None
-            if item.source_key:
-                source = source_map.get(item.source_key)
-                if source is None:
-                    raise HTTPException(
-                        status_code=422,
-                        detail=f"Evidence references unknown source_key: {item.source_key}",
-                    )
+            source = source_map.get(item.source_key) if item.source_key else None
             evidence = Evidence(
                 place_id=place_id,
                 source_id=source.id if source else None,
