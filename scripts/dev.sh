@@ -12,6 +12,14 @@ for command in python3 node npm; do
   fi
 done
 
+# Load local secrets/config without committing them. .env is gitignored.
+if [ -f .env ]; then
+  set -a
+  # shellcheck disable=SC1091
+  source .env
+  set +a
+fi
+
 # Some macOS Python framework installs have certifi available but do not expose
 # its CA bundle to pip automatically. Reuse it when present instead of asking a
 # first-time tester to disable TLS verification or export variables manually.

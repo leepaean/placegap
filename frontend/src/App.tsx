@@ -7,6 +7,7 @@ import {
   type Dimension,
   type EvidenceKind,
   type FindingProposal,
+  type LLMStatus,
   type Place,
   type Reliability,
   type SourcePackPayload,
@@ -22,6 +23,7 @@ function App() {
   const [placeId, setPlaceId] = useState('')
   const [state, setState] = useState<DiagnosticState | null>(null)
   const [proposals, setProposals] = useState<FindingProposal[]>([])
+  const [llmStatus, setLlmStatus] = useState<LLMStatus | null>(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
@@ -49,6 +51,7 @@ function App() {
 
   useEffect(() => {
     refreshPlaces().catch((e) => setError(String(e)))
+    api.llmStatus().then(setLlmStatus).catch((e) => setError(String(e)))
   }, [])
 
   useEffect(() => {
@@ -78,10 +81,13 @@ function App() {
       )
       const fresh = proposed.filter((item) => !existing.has(item.statement))
       setProposals(fresh)
+      const usedLLM = fresh.some((item) => item.generated_by.startsWith('llm:'))
       setNotice(
         fresh.length
-          ? `Drafted ${fresh.length} conservative candidate${fresh.length === 1 ? '' : 's'} from Evidence. No new words or inference were added.`
-          : 'No new candidates remain. Existing Findings already cover the current Evidence text.',
+          ? usedLLM
+            ? `Generated ${fresh.length} evidence-bound candidate${fresh.length === 1 ? '' : 's'} with suggested dimensions. Human review is still required.`
+            : `Drafted ${fresh.length} safe baseline candidate${fresh.length === 1 ? '' : 's'} from Evidence. Configure an LLM to reduce mechanical review work.`
+          : 'No new candidates remain. Existing Findings already cover the current Evidence.',
       )
     })
   }
@@ -92,7 +98,7 @@ function App() {
     <main className="shell">
       <header className="hero">
         <div>
-          <p className="eyebrow">PlaceGap · v0.0.2 dev</p>
+          <p className="eyebrow">PlaceGap · v0.0.3 dev</p>
           <h1>Evidence before advice.</h1>
           <p className="lede">Source → Evidence → Finding. Keep origin, representation, and interpretation separate.</p>
         </div>
@@ -208,8 +214,12 @@ function App() {
               </div>
 
               <div className="finding-tools">
-                <button className="primary-action" disabled={busy || state.evidence.length === 0} onClick={draftFromEvidence}>Draft from Evidence</button>
-                <p>The current baseline only splits the current Evidence representation into conservative candidates. It adds no new words, causes, or conclusions and uses no LLM yet.</p>
+                <button className="primary-action" disabled={busy || state.evidence.length === 0} onClick={draftFromEvidence}>Generate candidate findings</button>
+                <p>
+                  {llmStatus?.configured
+                    ? `LLM mode: ${llmStatus.model}. It may filter, merge and paraphrase only when the result remains directly supported by linked Evidence.`
+                    : 'Safe baseline mode: no LLM configured. Candidates are split from Evidence text and inherit the Evidence dimension when available.'}
+                </p>
               </div>
 
               {proposals.length > 0 && (
@@ -241,7 +251,7 @@ function App() {
               <ManualFindingForm placeId={state.place.id} evidence={state.evidence} disabled={busy} onSaved={() => run(() => refreshState())} />
 
               <div className="card-stack">
-                {state.findings.length === 0 && proposals.length === 0 && <Empty text="Draft candidates from Evidence, then review only the claims worth keeping." />}
+                {state.findings.length === 0 && proposals.length === 0 && <Empty text="Generate candidates from Evidence, then review only the claims worth keeping." />}
                 {state.findings.map((finding) => (
                   <FindingCard
                     key={finding.id}
@@ -388,13 +398,15 @@ function EvidenceForm({ placeId, sources, onSaved, disabled }: { placeId: string
 }
 
 function ProposalCard({ proposal, evidenceTitles, onAdd, onDismiss, disabled }: { proposal: FindingProposal; evidenceTitles: string[]; onAdd: (dimension: Dimension) => void; onDismiss: () => void; disabled: boolean }) {
-  const [dimension, setDimension] = useState<Dimension>('RESOURCE')
+  const [dimension, setDimension] = useState<Dimension>(proposal.dimension)
+  const modelLabel = proposal.generated_by.startsWith('llm:') ? proposal.generated_by.slice(4) : 'SAFE BASELINE'
   return <article className="proposal-card">
-    <div className="card-meta"><span className="badge">EVIDENCE-TEXT BASELINE</span><span>PROPOSED</span></div>
+    <div className="card-meta"><span className="badge">{modelLabel}</span><span>PROPOSED</span></div>
     <p className="proposal-statement">{proposal.statement}</p>
+    {proposal.support_note && <p className="source-name">Why this is supportable: {proposal.support_note}</p>}
     <div className="evidence-links">{evidenceTitles.map((title) => <span key={title}>↳ {title}</span>)}</div>
     <div className="proposal-actions">
-      <label>Dimension<select value={dimension} onChange={(e) => setDimension(e.target.value as Dimension)}>{DIMENSIONS.map((x) => <option key={x}>{x}</option>)}</select></label>
+      <label>Suggested dimension<select value={dimension} onChange={(e) => setDimension(e.target.value as Dimension)}>{DIMENSIONS.map((x) => <option key={x}>{x}</option>)}</select></label>
       <button disabled={disabled} onClick={() => onAdd(dimension)}>Add to review</button>
       <button className="ghost" disabled={disabled} onClick={onDismiss}>Dismiss</button>
     </div>
