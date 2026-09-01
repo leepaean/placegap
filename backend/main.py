@@ -12,8 +12,10 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from backend.llm import LLMProviderError, get_llm_config, llm_status, propose_findings_with_llm
 from backend.store import SQLiteStore
 from core.models import (
+    Dimension,
     Evidence,
     EvidenceKind,
     EvidenceNeed,
@@ -73,8 +75,10 @@ class FindingProposalRequest(BaseModel):
 
 class FindingProposal(BaseModel):
     statement: str
+    dimension: Dimension
     evidence_ids: list[UUID]
-    generated_by: str = "evidence-text-baseline"
+    generated_by: str
+    support_note: str | None = None
 
 
 def split_atomic_statements(text: str) -> list[str]:
@@ -85,6 +89,15 @@ def split_atomic_statements(text: str) -> list[str]:
         return []
     parts = re.split(r"(?<=[。！？!?])\s*|(?<=\.)\s+(?=[A-Z0-9])", compact)
     return [part.strip() for part in parts if part.strip()]
+
+
+def evidence_dimension(evidence: Evidence) -> Dimension:
+    if evidence.scope:
+        try:
+            return Dimension(evidence.scope)
+        except ValueError:
+            pass
+    return Dimension.RESOURCE
 
 
 def create_app(database_path: str | Path | None = None) -> FastAPI:
@@ -99,7 +112,7 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
 
     app = FastAPI(
         title="PlaceGap API",
-        version="0.0.2-dev",
+        version="0.0.3-dev",
         description="Evidence-backed diagnostics for cultural places.",
         lifespan=lifespan,
     )
@@ -155,7 +168,11 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
 
     @app.get("/health")
     def health() -> dict:
-        return {"status": "ok", "version": "0.0.2-dev"}
+        return {"status": "ok", "version": "0.0.3-dev"}
+
+    @app.get("/llm/status")
+    def get_llm_status() -> dict:
+        return llm_status()
 
     @app.get("/places", response_model=list[Place])
     def list_places(request: Request) -> list[Place]:
@@ -280,13 +297,37 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
         place_id: UUID, payload: FindingProposalRequest, request: Request
     ) -> list[FindingProposal]:
         store = get_store(request)
-        require_place(store, place_id)
+        place = require_place(store, place_id)
         evidence_items = require_same_place_evidence(store, place_id, payload.evidence_ids)
+
+        config = get_llm_config()
+        if config is not None:
+            try:
+                llm_proposals = propose_findings_with_llm(place, evidence_items)
+            except LLMProviderError as exc:
+                raise HTTPException(status_code=502, detail=str(exc)) from exc
+            return [
+                FindingProposal(
+                    statement=item.statement,
+                    dimension=item.dimension,
+                    evidence_ids=[UUID(value) for value in item.evidence_ids],
+                    generated_by=f"llm:{config.model}",
+                    support_note=item.support_note,
+                )
+                for item in llm_proposals
+            ]
+
         proposals: list[FindingProposal] = []
         for evidence in evidence_items:
             for statement in split_atomic_statements(evidence.excerpt):
                 proposals.append(
-                    FindingProposal(statement=statement, evidence_ids=[evidence.id])
+                    FindingProposal(
+                        statement=statement,
+                        dimension=evidence_dimension(evidence),
+                        evidence_ids=[evidence.id],
+                        generated_by="evidence-text-baseline",
+                        support_note="Verbatim sentence from the linked Evidence representation.",
+                    )
                 )
         return proposals
 
