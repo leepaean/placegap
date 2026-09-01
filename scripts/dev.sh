@@ -12,6 +12,16 @@ for command in python3 node npm; do
   fi
 done
 
+# Some macOS Python framework installs have certifi available but do not expose
+# its CA bundle to pip automatically. Reuse it when present instead of asking a
+# first-time tester to disable TLS verification or export variables manually.
+if [ -z "${SSL_CERT_FILE:-}" ]; then
+  CERTIFI_CA="$(python3 -c 'import certifi; print(certifi.where())' 2>/dev/null || true)"
+  if [ -n "$CERTIFI_CA" ] && [ -f "$CERTIFI_CA" ]; then
+    export SSL_CERT_FILE="$CERTIFI_CA"
+  fi
+fi
+
 if [ ! -d .venv ]; then
   echo "Creating Python environment…"
   python3 -m venv .venv
