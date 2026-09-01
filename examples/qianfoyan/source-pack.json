@@ -85,6 +85,7 @@
       "source_key": "qfy-heritage-intro",
       "title": "National-level grotto heritage and dense asset cluster",
       "excerpt": "The county describes Qianfoyan as a heritage-scenic area about 3 km west of the county seat. The grottoes were included in the sixth batch of Major Historical and Cultural Sites Protected at the National Level in 2006. The official introduction records 162 niches/caves and more than 2,470 stone sculptures, alongside ancient plank-road remains, a paper museum, temples, inscriptions and related heritage points.",
+      "kind": "SUMMARY",
       "reliability": "HIGH",
       "scope": "RESOURCE",
       "tags": ["grottoes", "national-heritage", "asset-base"]
@@ -93,6 +94,7 @@
       "source_key": "qfy-mayday-2025",
       "title": "2025 May Day visitor volume was already substantial",
       "excerpt": "During the 2025 May Day holiday, Jiajiang reported more than 410,000 countywide visitors and tourism revenue of RMB 321 million. A-rated attractions received 190,100 visits; Dongfengyan-Qianfoyan accounted for 81,300 visits, up 9.61% year on year.",
+      "kind": "DATUM",
       "reliability": "HIGH",
       "scope": "VISIBILITY",
       "tags": ["visitor-volume", "may-day", "2025"]
@@ -101,6 +103,7 @@
       "source_key": "qfy-revenue-response-2025",
       "title": "Admission dominates revenue while secondary consumption is weak",
       "excerpt": "The operator reported that admission contributed about 63% of total revenue. For the first half of 2025, scenic-area revenue was RMB 1.4117 million against expenditure of RMB 4.1302 million. Secondary-consumption items such as performances and specialty goods were described as still being cultivated and contributing less than 10% of revenue.",
+      "kind": "DATUM",
       "reliability": "HIGH",
       "scope": "CONVERSION",
       "tags": ["revenue", "ticket-dependence", "secondary-consumption"]
@@ -109,6 +112,7 @@
       "source_key": "qfy-revenue-response-2025",
       "title": "Peak-period capacity is constrained in core heritage spaces",
       "excerpt": "The official response states that core areas such as the Qianfoyan grottoes and Dongfengyan water-heritage spaces have limited physical capacity and that holiday traffic is already close to saturation, creating visitor-experience and conservation risks if load increases further.",
+      "kind": "SUMMARY",
       "reliability": "HIGH",
       "scope": "EXPERIENCE",
       "tags": ["capacity", "peak-load", "heritage-constraint"]
@@ -117,6 +121,7 @@
       "source_key": "qfy-rectification-2025",
       "title": "Stone-grotto digitization and a digital exhibition hall have been developed",
       "excerpt": "A 2025 rectification update states that Qianfoyan completed digital data collection for the grottoes and had preliminarily established a digital grotto exhibition hall. A later county heritage article describes 3D scanning and digital reconstruction as tools for conservation, research and visitor interpretation.",
+      "kind": "SUMMARY",
       "reliability": "HIGH",
       "scope": "EXPERIENCE",
       "tags": ["digitalization", "interpretation", "exhibition"]
@@ -125,6 +130,7 @@
       "source_key": "qfy-rectification-2025",
       "title": "County self-assessment identified weak linkage with the wider grotto network",
       "excerpt": "The county noted that Qianfoyan had entered the Sichuan-Chongqing Grotto Temple National Archaeological Site Park framework but that thinking on inter-site linkage remained insufficient and lacked concrete mechanisms. Follow-up actions included a cooperation agreement with the Dazu Rock Carvings Academy covering exhibitions, talent, academic exchange, publicity and visitor referral.",
+      "kind": "SUMMARY",
       "reliability": "HIGH",
       "scope": "VISIBILITY",
       "tags": ["network-linkage", "dazu", "institutional-self-assessment"]
@@ -133,6 +139,7 @@
       "source_key": "qfy-work-report-2026",
       "title": "The county continues to pursue research-tourism and product upgrades",
       "excerpt": "The 2026 government work report calls for strengthening the 'Fun Learning Jiajiang' research-tourism brand, developing more research routes and cultural products for multiple age groups, and continuing cultural-heritage documentation and digitization.",
+      "kind": "SUMMARY",
       "reliability": "HIGH",
       "scope": "PRODUCT",
       "tags": ["research-tourism", "product-development", "policy"]
@@ -141,6 +148,7 @@
       "source_key": "qfy-4a-upgrade-2020",
       "title": "Significant hard-infrastructure upgrading preceded the current diagnostic period",
       "excerpt": "During the 4A-upgrade project, the county reported more than 30 construction items including an approximately 18-mu parking lot, five new or renovated toilets, Juxian Street facade improvements, scenic-point upgrades, walking-path improvements, a rear-mountain traffic loop and utility works. The attraction obtained national 4A status in January 2021.",
+      "kind": "SUMMARY",
       "reliability": "HIGH",
       "scope": "EXPERIENCE",
       "tags": ["infrastructure", "4A", "visitor-facilities"]
@@ -149,6 +157,7 @@
       "source_key": "qfy-ctrip",
       "title": "Current OTA footprint is positive but small and contains value-for-money concerns",
       "excerpt": "At retrieval, Ctrip displayed a 4.5/5 rating based on 51 reviews. Visible recent reviews included strong appreciation for the grottoes and irrigation heritage, but also a 2025 National Day review arguing that the RMB 50 ticket felt expensive and that the site was not compelling enough for an out-of-town dedicated trip. Another detailed review estimated about two hours for a fuller circuit but much less for only the stone-carving section.",
+      "kind": "SUMMARY",
       "reliability": "LOW",
       "scope": "ADVOCACY",
       "tags": ["OTA", "reviews", "value-for-money", "trip-purpose"]
@@ -157,6 +166,7 @@
       "source_key": "qfy-qingyi-plan-2025",
       "title": "New surrounding-place concepts are planned around the upgraded scenic area",
       "excerpt": "Qingyi Subdistrict described a future 'one core, five areas' place-making concept centered on the Dongfengyan-Qianfoyan upgrade, including a suburban park, forest park, rice-field park, artist residency, courtyard/food cluster and accommodation/food leisure businesses. The plan is linked to improved access from new expressway infrastructure.",
+      "kind": "SUMMARY",
       "reliability": "HIGH",
       "scope": "REGENERATION",
       "tags": ["future-plan", "artist-residency", "food", "accommodation"]
