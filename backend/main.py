@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from backend.store import SQLiteStore
 from core.models import (
     Evidence,
+    EvidenceKind,
     EvidenceNeed,
     Finding,
     Gap,
@@ -50,6 +51,7 @@ class SourcePackEvidence(BaseModel):
     source_key: Optional[str] = None
     title: str
     excerpt: str
+    kind: EvidenceKind = EvidenceKind.SUMMARY
     reliability: Reliability = Reliability.UNRATED
     scope: Optional[str] = None
     tags: list[str] = Field(default_factory=list)
@@ -72,11 +74,11 @@ class FindingProposalRequest(BaseModel):
 class FindingProposal(BaseModel):
     statement: str
     evidence_ids: list[UUID]
-    generated_by: str = "verbatim-baseline"
+    generated_by: str = "evidence-text-baseline"
 
 
 def split_atomic_statements(text: str) -> list[str]:
-    """Conservative baseline: split source text without adding any new words."""
+    """Conservative baseline: split Evidence text without adding any new words."""
 
     compact = " ".join(text.split())
     if not compact:
@@ -235,6 +237,7 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
                 source_id=source.id if source else None,
                 title=item.title,
                 excerpt=item.excerpt,
+                kind=item.kind,
                 reliability=item.reliability if item.reliability != Reliability.UNRATED else (source.reliability if source else Reliability.UNRATED),
                 scope=item.scope,
                 tags=item.tags,
