@@ -24,8 +24,15 @@ Source → Evidence → Finding → Human Verification → Gap → Hypothesis
 The first three layers have deliberately different jobs:
 
 - **Source**: the whole document, webpage, interview, observation record, or other origin;
-- **Evidence**: the excerpt, datum, or observation relevant to the current diagnostic scope;
+- **Evidence**: a diagnostic representation linked to a Source;
 - **Finding**: an atomic statement directly supportable by one or more Evidence items.
+
+Evidence is explicitly typed so provenance is not blurred:
+
+- `QUOTE`: source wording;
+- `DATUM`: a structured fact or measurement;
+- `SUMMARY`: an explicit paraphrase of source content;
+- `OBSERVATION`: a field observation or other directly recorded observation.
 
 A Finding must not introduce a claim that is absent from its Evidence. Interpretation belongs later in Gap and Hypothesis work.
 
@@ -60,11 +67,11 @@ The repository contains a draft Qianfoyan / 千佛岩 pack at:
 examples/qianfoyan/source-pack.json
 ```
 
-The pack contains Sources and Evidence only. It intentionally does not ship a pre-baked diagnosis.
+The pack contains Sources and Evidence only. It intentionally does not ship a pre-baked diagnosis. Its Evidence entries are also marked as `DATUM` or `SUMMARY` where appropriate rather than being presented as quotations.
 
 ## Finding proposals before LLM integration
 
-The current `Draft from Evidence` action is deliberately conservative. It only splits Evidence text into verbatim candidate statements. It does not classify meaning, infer causes, or add facts.
+The current `Draft from Evidence` action is deliberately conservative. It only splits the current Evidence text into candidate statements and adds no new words, causes, or conclusions. Because an Evidence item may itself be a `SUMMARY`, the baseline is not described as a source-text or quotation extractor.
 
 This provider-free baseline gives future LLM integration a behavioral floor: an LLM must add useful structure while preserving evidence fidelity, uncertainty discipline, and traceability.
 
