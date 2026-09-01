@@ -37,3 +37,4 @@ def test_qianfoyan_source_pack_imports_without_diagnosis(tmp_path):
 
         # A Source Pack supplies provenance and Evidence, not a pre-baked diagnosis.
         assert all(item["source_id"] for item in state["evidence"])
+        assert {item["kind"] for item in state["evidence"]} == {"DATUM", "SUMMARY"}
