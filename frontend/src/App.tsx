@@ -2,8 +2,10 @@ import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { api } from './api'
 import {
   DIMENSIONS,
+  EVIDENCE_KINDS,
   type DiagnosticState,
   type Dimension,
+  type EvidenceKind,
   type FindingProposal,
   type Place,
   type Reliability,
@@ -41,10 +43,7 @@ function App() {
   }
 
   async function refreshState(id = placeId) {
-    if (!id) {
-      setState(null)
-      return
-    }
+    if (!id) return setState(null)
     setState(await api.state(id))
   }
 
@@ -81,15 +80,13 @@ function App() {
       setProposals(fresh)
       setNotice(
         fresh.length
-          ? `Drafted ${fresh.length} conservative candidate${fresh.length === 1 ? '' : 's'} from Evidence. No inference was added.`
-          : 'No new verbatim candidates remain. Existing Findings already cover the current Evidence text.',
+          ? `Drafted ${fresh.length} conservative candidate${fresh.length === 1 ? '' : 's'} from Evidence. No new words or inference were added.`
+          : 'No new candidates remain. Existing Findings already cover the current Evidence text.',
       )
     })
   }
 
-  function proposalKey(proposal: FindingProposal) {
-    return `${proposal.statement}::${proposal.evidence_ids.join(',')}`
-  }
+  const proposalKey = (proposal: FindingProposal) => `${proposal.statement}::${proposal.evidence_ids.join(',')}`
 
   return (
     <main className="shell">
@@ -97,7 +94,7 @@ function App() {
         <div>
           <p className="eyebrow">PlaceGap · v0.0.2 dev</p>
           <h1>Evidence before advice.</h1>
-          <p className="lede">Source → Evidence → Finding. Keep origin, support, and interpretation separate.</p>
+          <p className="lede">Source → Evidence → Finding. Keep origin, representation, and interpretation separate.</p>
         </div>
         <div className="place-switcher">
           <label>Active place</label>
@@ -129,7 +126,7 @@ function App() {
               <div>
                 <p className="eyebrow">01 · Source Library</p>
                 <h2>Where did this come from?</h2>
-                <p className="section-help">A Source is the whole document, webpage, interview, or observation record. It is not yet a Finding.</p>
+                <p className="section-help">A Source is the whole document, webpage, interview, or observation record. It is not yet Evidence or a Finding.</p>
               </div>
               <span className="count">{state.sources.length}</span>
             </div>
@@ -167,7 +164,7 @@ function App() {
                 <div>
                   <p className="eyebrow">02 · Evidence Board</p>
                   <h2>What does the Source actually support?</h2>
-                  <p className="section-help">Evidence is a relevant excerpt, datum, or observation. Keep it close to the Source wording.</p>
+                  <p className="section-help">Evidence is explicitly typed as a quote, datum, summary, or observation so a paraphrase cannot masquerade as source wording.</p>
                 </div>
                 <span className="count">{state.evidence.length}</span>
               </div>
@@ -178,13 +175,16 @@ function App() {
                 onSaved={() => run(() => refreshState())}
               />
               <div className="card-stack">
-                {state.evidence.length === 0 && <Empty text="Extract a relevant excerpt or datum from a Source before forming a diagnosis." />}
+                {state.evidence.length === 0 && <Empty text="Represent a relevant excerpt, datum, summary, or observation before forming a diagnosis." />}
                 {state.evidence.map((item) => {
                   const linkedSource = item.source_id ? sourceById.get(item.source_id) : undefined
                   return (
                     <article className="evidence-card" key={item.id}>
                       <div className="card-meta">
-                        <span className="badge">{linkedSource?.source_type ?? item.source_type}</span>
+                        <div className="badge-row">
+                          <span className="badge">{item.kind}</span>
+                          <span className="badge">{linkedSource?.source_type ?? item.source_type}</span>
+                        </div>
                         <span className={`reliability reliability-${item.reliability.toLowerCase()}`}>{item.reliability}</span>
                       </div>
                       <h3>{item.title}</h3>
@@ -209,7 +209,7 @@ function App() {
 
               <div className="finding-tools">
                 <button className="primary-action" disabled={busy || state.evidence.length === 0} onClick={draftFromEvidence}>Draft from Evidence</button>
-                <p>Current baseline only splits Evidence text into verbatim candidates. It adds no new claims and uses no LLM yet.</p>
+                <p>The current baseline only splits the current Evidence representation into conservative candidates. It adds no new words, causes, or conclusions and uses no LLM yet.</p>
               </div>
 
               {proposals.length > 0 && (
@@ -318,7 +318,7 @@ function SourceForm({ placeId, onSaved, disabled }: { placeId: string; onSaved: 
       <div className="form-row"><label>Source title<input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Document, webpage, interview, observation…" /></label><label>Type<select value={sourceType} onChange={(e) => setSourceType(e.target.value)}>{SOURCE_TYPES.map((x) => <option key={x}>{x}</option>)}</select></label></div>
       <div className="form-row"><label>Publisher / institution<input value={sourceName} onChange={(e) => setSourceName(e.target.value)} /></label><label>Author<input value={author} onChange={(e) => setAuthor(e.target.value)} /></label></div>
       <label>URL<input value={url} onChange={(e) => setUrl(e.target.value)} /></label>
-      <label>Source text <span className="optional">optional for now</span><textarea rows={5} value={contentText} onChange={(e) => setContentText(e.target.value)} placeholder="Paste source text if useful. Evidence will still be extracted separately." /></label>
+      <label>Source text <span className="optional">optional for now</span><textarea rows={5} value={contentText} onChange={(e) => setContentText(e.target.value)} placeholder="Paste source text if useful. Evidence will still be represented separately." /></label>
       <label>Reliability<select value={reliability} onChange={(e) => setReliability(e.target.value as Reliability)}>{RELIABILITIES.map((x) => <option key={x}>{x}</option>)}</select></label>
       <button disabled={disabled}>Save source</button>
     </form>}
@@ -356,6 +356,7 @@ function EvidenceForm({ placeId, sources, onSaved, disabled }: { placeId: string
   const [sourceType, setSourceType] = useState('field_observation')
   const [sourceName, setSourceName] = useState('')
   const [excerpt, setExcerpt] = useState('')
+  const [kind, setKind] = useState<EvidenceKind>('QUOTE')
   const [reliability, setReliability] = useState<Reliability>('UNRATED')
 
   async function submit(e: FormEvent) {
@@ -365,11 +366,12 @@ function EvidenceForm({ placeId, sources, onSaved, disabled }: { placeId: string
       source_id: sourceId || null,
       title: title.trim(),
       excerpt: excerpt.trim(),
+      kind,
       reliability,
       source_type: sourceId ? undefined : sourceType,
       source_name: sourceId ? undefined : (sourceName.trim() || null),
     })
-    setSourceId(''); setTitle(''); setSourceName(''); setExcerpt(''); setReliability('UNRATED'); setOpen(false); onSaved()
+    setSourceId(''); setTitle(''); setSourceName(''); setExcerpt(''); setKind('QUOTE'); setReliability('UNRATED'); setOpen(false); onSaved()
   }
 
   return <div className="composer">
@@ -377,8 +379,8 @@ function EvidenceForm({ placeId, sources, onSaved, disabled }: { placeId: string
     {open && <form onSubmit={submit} className="stack-form">
       <label>Source link<select value={sourceId} onChange={(e) => setSourceId(e.target.value)}><option value="">Standalone evidence / direct observation</option>{sources.map((source) => <option key={source.id} value={source.id}>{source.title}</option>)}</select></label>
       {!sourceId && <div className="form-row"><label>Standalone type<select value={sourceType} onChange={(e) => setSourceType(e.target.value)}>{SOURCE_TYPES.map((x) => <option key={x}>{x}</option>)}</select></label><label>Source name<input value={sourceName} onChange={(e) => setSourceName(e.target.value)} /></label></div>}
-      <label>Evidence title<input required value={title} onChange={(e) => setTitle(e.target.value)} /></label>
-      <label>Exact excerpt / datum<textarea required rows={5} value={excerpt} onChange={(e) => setExcerpt(e.target.value)} placeholder="Keep this close to what the Source actually says." /></label>
+      <div className="form-row"><label>Evidence title<input required value={title} onChange={(e) => setTitle(e.target.value)} /></label><label>Representation<select value={kind} onChange={(e) => setKind(e.target.value as EvidenceKind)}>{EVIDENCE_KINDS.map((x) => <option key={x}>{x}</option>)}</select></label></div>
+      <label>Evidence text / datum<textarea required rows={5} value={excerpt} onChange={(e) => setExcerpt(e.target.value)} placeholder="QUOTE = source wording; DATUM = structured fact; SUMMARY = explicit paraphrase; OBSERVATION = field observation." /></label>
       <label>Reliability<select value={reliability} onChange={(e) => setReliability(e.target.value as Reliability)}>{RELIABILITIES.map((x) => <option key={x}>{x}</option>)}</select></label>
       <button disabled={disabled}>Save evidence</button>
     </form>}
@@ -388,7 +390,7 @@ function EvidenceForm({ placeId, sources, onSaved, disabled }: { placeId: string
 function ProposalCard({ proposal, evidenceTitles, onAdd, onDismiss, disabled }: { proposal: FindingProposal; evidenceTitles: string[]; onAdd: (dimension: Dimension) => void; onDismiss: () => void; disabled: boolean }) {
   const [dimension, setDimension] = useState<Dimension>('RESOURCE')
   return <article className="proposal-card">
-    <div className="card-meta"><span className="badge">VERBATIM BASELINE</span><span>PROPOSED</span></div>
+    <div className="card-meta"><span className="badge">EVIDENCE-TEXT BASELINE</span><span>PROPOSED</span></div>
     <p className="proposal-statement">{proposal.statement}</p>
     <div className="evidence-links">{evidenceTitles.map((title) => <span key={title}>↳ {title}</span>)}</div>
     <div className="proposal-actions">
